@@ -1,0 +1,438 @@
+{
+    "data": {
+        "organizations": [
+            {
+                "name": "รัฐสภาไทย",
+                "image": null
+            },
+            {
+                "name": "สภาผู้แทนราษฎร ชุดที่ 25",
+                "image": null
+            },
+            {
+                "name": "สภาผู้แทนราษฎร ชุดที่ 26",
+                "image": null
+            },
+            {
+                "name": "วุฒิสภา ชุดที่ 12",
+                "image": null
+            },
+            {
+                "name": "วุฒิสภา ชุดที่ 13",
+                "image": null
+            },
+            {
+                "name": "คณะรัฐมนตรี คณะที่ 62",
+                "image": null
+            },
+            {
+                "name": "คณะรัฐมนตรี คณะที่ 63",
+                "image": null
+            },
+            {
+                "name": "คณะรัฐมนตรี คณะที่ 64",
+                "image": null
+            },
+            {
+                "name": "กรีน",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/กรีน.webp"
+            },
+            {
+                "name": "กล้า",
+                "image": null
+            },
+            {
+                "name": "ก้าวไกล",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ก้าวไกล.webp"
+            },
+            {
+                "name": "คนงานไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/คนงานไทย.webp"
+            },
+            {
+                "name": "ครูไทยเพื่อประชาชน",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ครูไทยเพื่อประชาชน.webp"
+            },
+            {
+                "name": "คลองไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/คลองไทย.webp"
+            },
+            {
+                "name": "ความหวังใหม่",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ความหวังใหม่.webp"
+            },
+            {
+                "name": "ชาติพัฒนากล้า",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ชาติพัฒนากล้า.webp"
+            },
+            {
+                "name": "ชาติรุ่งเรือง",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ชาติรุ่งเรือง.webp"
+            },
+            {
+                "name": "ชาติไทยพัฒนา",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ชาติไทยพัฒนา.webp"
+            },
+            {
+                "name": "ช่วยชาติ",
+                "image": null
+            },
+            {
+                "name": "ถิ่นกาขาวชาววิไล",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ถิ่นกาขาวชาววิไล.webp"
+            },
+            {
+                "name": "ทางเลือกใหม่",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ทางเลือกใหม่.webp"
+            },
+            {
+                "name": "ท้องที่ไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ท้องที่ไทย.webp"
+            },
+            {
+                "name": "ประชากรไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ประชากรไทย.webp"
+            },
+            {
+                "name": "ประชาชนปฏิรูป",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ประชาชนปฏิรูป.webp"
+            },
+            {
+                "name": "ประชาชาติ",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ประชาชาติ.webp"
+            },
+            {
+                "name": "ประชาธรรมไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ประชาธรรมไทย.webp"
+            },
+            {
+                "name": "ประชาธิปัตย์",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ประชาธิปัตย์.webp"
+            },
+            {
+                "name": "ประชาธิปไตยใหม่",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ประชาธิปไตยใหม่.webp"
+            },
+            {
+                "name": "ประชานิยม",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ประชานิยม.webp"
+            },
+            {
+                "name": "ประชาภิวัฒน์",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ประชาภิวัฒน์.webp"
+            },
+            {
+                "name": "ประชาสามัคคี",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ประชาสามัคคี.webp"
+            },
+            {
+                "name": "ประชาไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ประชาไทย.webp"
+            },
+            {
+                "name": "พลัง",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/พลัง.webp"
+            },
+            {
+                "name": "พลังท้องถิ่นไท",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/พลังท้องถิ่นไท.webp"
+            },
+            {
+                "name": "พลังธรรมใหม่",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/พลังธรรมใหม่.webp"
+            },
+            {
+                "name": "พลังบูรพา",
+                "image": null
+            },
+            {
+                "name": "พลังประชาธิปไตย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/พลังประชาธิปไตย.webp"
+            },
+            {
+                "name": "พลังประชารัฐ",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/พลังประชารัฐ.webp"
+            },
+            {
+                "name": "พลังปวงชนไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/พลังปวงชนไทย.webp"
+            },
+            {
+                "name": "พลังศรัทธา",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/พลังศรัทธา.webp"
+            },
+            {
+                "name": "พลังสยาม",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/พลังสยาม.webp"
+            },
+            {
+                "name": "พลังสหกรณ์",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/พลังสหกรณ์.webp"
+            },
+            {
+                "name": "พลังสังคม",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/พลังสังคม.webp"
+            },
+            {
+                "name": "พลังสังคมใหม่",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/พลังสังคมใหม่.webp"
+            },
+            {
+                "name": "พลังเพื่อไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/พลังเพื่อไทย.webp"
+            },
+            {
+                "name": "พลังไทยรักชาติ",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/พลังไทยรักชาติ.webp"
+            },
+            {
+                "name": "พลังไทรุ่งเรือง",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/พลังไทรุ่งเรือง.webp"
+            },
+            {
+                "name": "ภราดรภาพ",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ภราดรภาพ.webp"
+            },
+            {
+                "name": "ภาคีเครือข่ายไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ภาคีเครือข่ายไทย.webp"
+            },
+            {
+                "name": "ภูมิใจไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ภูมิใจไทย.webp"
+            },
+            {
+                "name": "มิติใหม่",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/มิติใหม่.webp"
+            },
+            {
+                "name": "ยุทธศาสตร์ชาติ",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ยุทธศาสตร์ชาติ.webp"
+            },
+            {
+                "name": "รวมพลัง",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/รวมพลัง.webp"
+            },
+            {
+                "name": "รวมแผ่นดิน",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/รวมแผ่นดิน.webp"
+            },
+            {
+                "name": "รวมใจไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/รวมใจไทย.webp"
+            },
+            {
+                "name": "รวมไทยยูไนเต็ด",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/รวมไทยยูไนเต็ด.webp"
+            },
+            {
+                "name": "รวมไทยสร้างชาติ",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/รวมไทยสร้างชาติ.webp"
+            },
+            {
+                "name": "รักษ์ธรรม",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/รักษ์ธรรม.webp"
+            },
+            {
+                "name": "รักษ์ผืนป่าประเทศไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/รักษ์ผืนป่าประเทศไทย.webp"
+            },
+            {
+                "name": "ราษฎร์วิถี",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ราษฎร์วิถี.webp"
+            },
+            {
+                "name": "สยามพล",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/สยามพล.webp"
+            },
+            {
+                "name": "สร้างชาติ",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/สร้างชาติ.webp"
+            },
+            {
+                "name": "สร้างอนาคตไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/สร้างอนาคตไทย.webp"
+            },
+            {
+                "name": "สังคมประชาธิปไตยไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/สังคมประชาธิปไตยไทย.webp"
+            },
+            {
+                "name": "สัมมาธิปไตย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/สัมมาธิปไตย.webp"
+            },
+            {
+                "name": "สามัญชน",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/สามัญชน.webp"
+            },
+            {
+                "name": "อนาคตใหม่",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/อนาคตใหม่.webp"
+            },
+            {
+                "name": "อนาคตไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/อนาคตไทย.webp"
+            },
+            {
+                "name": "เครือข่ายชาวนาแห่งประเทศไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เครือข่ายชาวนาแห่งประเทศไทย.webp"
+            },
+            {
+                "name": "เปลี่ยน",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เปลี่ยน.webp"
+            },
+            {
+                "name": "เปลี่ยนอนาคต",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เปลี่ยนอนาคต.webp"
+            },
+            {
+                "name": "เป็นธรรม",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เป็นธรรม.webp"
+            },
+            {
+                "name": "เพื่อชาติ",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เพื่อชาติ.webp"
+            },
+            {
+                "name": "เพื่อชาติไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เพื่อชาติไทย.webp"
+            },
+            {
+                "name": "เพื่อประชาชน",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เพื่อประชาชน.webp"
+            },
+            {
+                "name": "เพื่อราษฎร",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เพื่อราษฎร.webp"
+            },
+            {
+                "name": "เพื่ออนาคตไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เพื่ออนาคตไทย.webp"
+            },
+            {
+                "name": "เพื่อแผ่นดิน",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เพื่อแผ่นดิน.webp"
+            },
+            {
+                "name": "เพื่อไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เพื่อไทย.webp"
+            },
+            {
+                "name": "เพื่อไทรวมพลัง",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เพื่อไทรวมพลัง.webp"
+            },
+            {
+                "name": "เราทำได้",
+                "image": null
+            },
+            {
+                "name": "เศรษฐกิจใหม่",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เศรษฐกิจใหม่.webp"
+            },
+            {
+                "name": "เศรษฐกิจไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เศรษฐกิจไทย.webp"
+            },
+            {
+                "name": "เสมอภาค",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เสมอภาค.webp"
+            },
+            {
+                "name": "เสรีรวมไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เสรีรวมไทย.webp"
+            },
+            {
+                "name": "เส้นด้าย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เส้นด้าย.webp"
+            },
+            {
+                "name": "เส้นทางใหม่",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/เส้นทางใหม่.webp"
+            },
+            {
+                "name": "แนวทางใหม่",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/แนวทางใหม่.webp"
+            },
+            {
+                "name": "แผ่นดินธรรม",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/แผ่นดินธรรม.webp"
+            },
+            {
+                "name": "แรงงานสร้างชาติ",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/แรงงานสร้างชาติ.webp"
+            },
+            {
+                "name": "ใหม่",
+                "image": null
+            },
+            {
+                "name": "ไทยก้าวหน้า",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ไทยก้าวหน้า.webp"
+            },
+            {
+                "name": "ไทยชนะ",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ไทยชนะ.webp"
+            },
+            {
+                "name": "ไทยธรรม",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ไทยธรรม.webp"
+            },
+            {
+                "name": "ไทยพร้อม",
+                "image": null
+            },
+            {
+                "name": "ไทยภักดี",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ไทยภักดี.webp"
+            },
+            {
+                "name": "ไทยรวมไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ไทยรวมไทย.webp"
+            },
+            {
+                "name": "ไทยศรีวิไลย์",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ไทยศรีวิไลย์.webp"
+            },
+            {
+                "name": "ไทยสมาร์ท",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ไทยสมาร์ท.webp"
+            },
+            {
+                "name": "ไทยสร้างสรรค์",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ไทยสร้างสรรค์.webp"
+            },
+            {
+                "name": "ไทยสร้างไทย",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ไทยสร้างไทย.webp"
+            },
+            {
+                "name": "ไทยเป็นหนึ่ง",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ไทยเป็นหนึ่ง.webp"
+            },
+            {
+                "name": "ไทรักธรรม",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ไทรักธรรม.webp"
+            },
+            {
+                "name": "ประชาชน",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ประชาชน.webp"
+            },
+            {
+                "name": "ชาติพัฒนา",
+                "image": "https://politigraph.wevis.info/assets/organizations/political-parties/ชาติพัฒนา.webp"
+            },
+            {
+                "name": "ไทรวมพลัง",
+                "image": null
+            },
+            {
+                "name": "กล้าธรรม",
+                "image": null
+            },
+            {
+                "name": "คณะรัฐมนตรี คณะที่ 65",
+                "image": null
+            }
+        ]
+    }
+}
