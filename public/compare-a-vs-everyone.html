@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<title>Compare A vs Everyone</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<!-- D3 -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<style>
+  body {
+    margin: 0;
+    background: #f6f8fb;
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    color: #111;
+  }
+
+  #wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  h2.section-title {
+    margin: 20px 0 10px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .card {
+    background: #fff;
+    padding: 16px;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(2, 6, 23, 0.08);
+    margin-bottom: 20px;
+  }
+
+  canvas, svg {
+    overflow: visible;
+  }
+
+  /* Tooltip */
+  #tooltip {
+    position: fixed;
+    pointer-events: none;
+    visibility: hidden;
+    background: rgba(15,23,42,0.92);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 1000;
+    max-width: 280px;
+    white-space: pre-wrap;
+    line-height: 1.35;
+  }
+</style>
+</head>
+
+<body>
+<div id="wrap">
+
+  <h2 class="section-title">📌 สรุปคะแนนเสียง</h2>
+  <div id="halfArcCard" class="card">
+    <svg id="halfArcSVG" width="1000" height="360"></svg>
+  </div>
+
+  <h2 class="section-title">👤 ข้อมูลส่วนตัว</h2>
+  <div id="profileCard" class="card">
+    <svg id="profileSVG" width="1000" height="320"></svg>
+  </div>
+
+  <h2 class="section-title">📅 ไทม์ไลน์การลงคะแนน</h2>
+  <div id="timelineCard" class="card">
+    <svg id="timelineSVG" width="1000" height="420"></svg>
+  </div>
+
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+/* ===========================================================
+    1) READ QUERY PARAM: ?name=xxxx
+=========================================================== */
+function getQueryParam(key) {
+  return new URLSearchParams(window.location.search).get(key);
+}
+const TARGET_MP = getQueryParam("name") || "";
+
+/* ===========================================================
+    2) SAMPLE DATA (Replace with your GraphQL later)
+=========================================================== */
+const votes = [
+  { name: "นาย ก", party: "พรรคก้าวไกล", score: 1, date: "2023-01-10" },
+  { name: "นาย ข", party: "พรรคประชาธิปัตย์", score: -1, date: "2023-01-10" },
+  { name: "นางสาว ก", party: "พรรคเพื่อไทย", score: 1, date: "2023-01-10" },
+  { name: "นาย ค", party: "พรรครวมไทยสร้างชาติ", score: 1, date: "2023-01-10" }
+];
+
+// Color palette
+const partyColor = {
+  "พรรคก้าวไกล": "#ff6b00",
+  "พรรคประชาธิปัตย์": "#0085ff",
+  "พรรคเพื่อไทย": "#cc0000",
+  "พรรครวมไทยสร้างชาติ": "#0a3dff",
+  "อื่น ๆ": "#999"
+};
+
+/* ===========================================================
+    3) TOOLTIP
+=========================================================== */
+const tooltip = d3.select("#tooltip");
+function showTip(html, x, y) {
+  tooltip.style("visibility", "visible")
+    .style("left", x + 12 + "px")
+    .style("top", y + 12 + "px")
+    .html(html);
+}
+function hideTip() {
+  tooltip.style("visibility", "hidden");
+}
+
+/* ===========================================================
+    4) HALF ARC DIAGRAM
+=========================================================== */
+function drawHalfArc() {
+  const svg = d3.select("#halfArcSVG");
+  svg.selectAll("*").remove();
+
+  const width = svg.attr("width");
+  const height = svg.attr("height");
+  const centerX = width / 2;
+  const centerY = height * 0.92;
+  const radius = 260;
+
+  const g = svg.append("g");
+
+  // Arc scale: left (-1), right (+1)
+  const scale = d3.scaleLinear()
+    .domain([-1, 1])
+    .range([-Math.PI, 0]); // half arc
+
+  g.selectAll("circle.node")
+    .data(votes)
+    .enter()
+    .append("circle")
+    .attr("cx", d => centerX + radius * Math.cos(scale(-d.score)))
+    .attr("cy", d => centerY + radius * Math.sin(scale(-d.score)))
+    .attr("r", d => d.name === TARGET_MP ? 11 : 8)
+    .attr("fill", d => partyColor[d.party] || "#444")
+    .attr("stroke", d => d.name === TARGET_MP ? "#000" : "none")
+    .attr("stroke-width", 2)
+    .on("mousemove", (e, d) => {
+      showTip(`${d.name}\n${d.party}\nคะแนน: ${d.score}`,
+        e.clientX, e.clientY);
+    })
+    .on("mouseleave", hideTip);
+}
+
+/* ===========================================================
+    5) PROFILE GRAPH (Simple Radar / Bars)
+=========================================================== */
+function drawProfile() {
+  const svg = d3.select("#profileSVG");
+  svg.selectAll("*").remove();
+
+  const width = svg.attr("width");
+  const height = svg.attr("height");
+
+  const person = votes.find(v => v.name === TARGET_MP) || votes[0];
+
+  svg.append("text")
+    .attr("x", 20)
+    .attr("y", 40)
+    .attr("font-size", 22)
+    .attr("font-weight", 700)
+    .text(person.name);
+
+  svg.append("text")
+    .attr("x", 20)
+    .attr("y", 75)
+    .attr("font-size", 16)
+    .text("พรรค: " + person.party);
+
+  // Decorative bar
+  svg.append("rect")
+    .attr("x", 20)
+    .attr("y", 110)
+    .attr("width", 300)
+    .attr("height", 18)
+    .attr("rx", 8)
+    .attr("fill", partyColor[person.party] || "#999");
+}
+
+/* ===========================================================
+    6) TIMELINE
+=========================================================== */
+function drawTimeline() {
+  const svg = d3.select("#timelineSVG");
+  svg.selectAll("*").remove();
+
+  const width = svg.attr("width");
+  const height = svg.attr("height");
+  const margin = { top: 40, right: 40, bottom: 50, left: 60 };
+
+  const x = d3.scaleBand()
+    .domain(votes.map(d => d.date))
+    .range([margin.left, width - margin.right])
+    .padding(0.4);
+
+  const y = d3.scaleLinear()
+    .domain([-1, 1])
+    .range([height - margin.bottom, margin.top]);
+
+  svg.append("g")
+    .attr("transform", `translate(0,${height - margin.bottom})`)
+    .call(d3.axisBottom(x));
+
+  svg.append("g")
+    .attr("transform", `translate(${margin.left},0)`)
+    .call(d3.axisLeft(y));
+
+  svg.selectAll(".tl-dot")
+    .data(votes)
+    .enter()
+    .append("circle")
+    .attr("cx", d => x(d.date) + x.bandwidth() / 2)
+    .attr("cy", d => y(d.score))
+    .attr("r", d => d.name === TARGET_MP ? 10 : 7)
+    .attr("fill", d => partyColor[d.party])
+    .on("mousemove", (e, d) =>
+      showTip(`${d.name}\n${d.party}\n${d.date}\nคะแนน: ${d.score}`,
+        e.clientX, e.clientY))
+    .on("mouseleave", hideTip);
+}
+
+/* ===========================================================
+    7) INITIALIZE
+=========================================================== */
+drawHalfArc();
+drawProfile();
+drawTimeline();
+</script>
+
+</body>
+</html>

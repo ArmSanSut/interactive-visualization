@@ -1,0 +1,69 @@
+.imodal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  animation: fadeIn 0.25s ease-out;
+}
+
+.imodal-content {
+  position: relative;
+  width: 84vw;
+  height: 84vh;
+
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+
+  overflow: hidden;
+  animation: popIn 0.25s ease-out;
+}
+
+.imodal-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.imodal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: #0f172a;
+  color: white;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  z-index: 99999;
+}
+
+.imodal-close:hover {
+  background: #1e293b;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.94);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
