@@ -1155,7 +1155,7 @@ export default function VisMain() {
       ves.forEach((ev) => {
         const card = container
           .append("div")
-          .attr("class", "card")
+          .attr("class", "card-vismain")
           .attr("tabindex", 0)
           .style("cursor", "pointer")
           .on("click", () => openGeoModal(ev))

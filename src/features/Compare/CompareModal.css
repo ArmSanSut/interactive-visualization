@@ -195,9 +195,9 @@
    Card
    ========================= */
 .card {
-  height: 100%; /* ยืดเต็มแถวกริด */
+  height: 100%; 
   min-height: 0;
-  overflow: hidden; /* กันเนื้อหาล้นกรอบ */
+  overflow: hidden; 
   display: flex;
   flex-direction: column;
   background: var(--card);

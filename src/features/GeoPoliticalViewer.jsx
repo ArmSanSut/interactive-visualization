@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import { FALLBACK_URLS } from "../data/fallbackUrls.js";
 import { loadFallback } from "../data/fallbackLoader.js";
+import js from "@eslint/js";
 
 
 export default function GeoPoliticalViewer({
@@ -49,9 +50,10 @@ export default function GeoPoliticalViewer({
     const res = await fetch(FALLBACK_URLS.voteEvents);
     if (!res.ok) throw new Error("Failed to load local fallback");
     const json = await res.json();
+    console.log("geo json", json);
 
     // Fallback file may have different structures → normalize
-    return json?.voteEvents || json?.events || json || [];
+    return json?.data.voteEvents || json?.data.events || json || [];
   } catch (err) {
     console.error("❌ Local fallback load failed:", err);
     return [];
@@ -96,16 +98,26 @@ export default function GeoPoliticalViewer({
   }
 
   function lastProvinceOf(memberships) {
-    if (!Array.isArray(memberships)) return null;
-    for (let i = memberships.length - 1; i >= 0; i--) {
-      const p = memberships[i] && memberships[i].province;
-      if (p && norm(p)) return norm(p);
-    }
-    return null;
+  if (!Array.isArray(memberships) || memberships.length === 0) return null;
+
+  // 1) Prefer any non-null value
+  for (const m of memberships) {
+    if (m?.province && m.province.trim()) return m.province.trim();
   }
 
-  // ✅ FIXED: Better structure detection with explicit checks
+  // 2) fallback to reverse (CodePen logic)
+  for (let i = memberships.length - 1; i >= 0; i--) {
+    const p = memberships[i]?.province;
+    if (p && p.trim()) return p.trim();
+  }
+
+  return null;
+}
+
+
+
   function normalizeVoteStructure(event) {
+    console.log("event", event);
     if (!event || !event.votes) return { ...event, votes: [] };
     
     const firstVote = event.votes[0];
@@ -356,140 +368,11 @@ export default function GeoPoliticalViewer({
     };
   }, []);
 
-  // ---------- Load Politigraph or use eventObj ----------
-  // useEffect(() => {
-  //   let mounted = true;
-
-  //   // Load fallback events first
-  //   const fallbackEvents = coerceFallbackEvents(fallback);
-  //   setRawEvents(fallbackEvents);
-
-  //   if (eventObj) {
-  //     console.log("✅ Received eventObj from parent:", eventObj);
-  //     console.log("🔍 Searching for matching event in fallback JSON...");
-      
-  //     let matchingEvent = null;
-      
-  //     // Strategy 1: Try matching by ID first (most reliable)
-  //     if (eventObj.id) {
-  //       matchingEvent = fallbackEvents.find(e => e.id === eventObj.id);
-  //       if (matchingEvent) {
-  //         console.log("✅ FOUND by ID:", eventObj.id);
-  //       }
-  //     }
-      
-  //     // Strategy 2: Try exact title match
-  //     if (!matchingEvent && eventObj.title) {
-  //       const eventTitle = eventObj.title.trim().toLowerCase();
-  //       matchingEvent = fallbackEvents.find(e => {
-  //         const fallbackTitle = (e.title || "").trim().toLowerCase();
-  //         return fallbackTitle === eventTitle;
-  //       });
-  //       if (matchingEvent) {
-  //         console.log("✅ FOUND by exact title match");
-  //       }
-  //     }
-      
-  //     // Strategy 3: Try substring/contains match
-  //     if (!matchingEvent && eventObj.title) {
-  //       const eventTitle = eventObj.title.trim().toLowerCase();
-  //       matchingEvent = fallbackEvents.find(e => {
-  //         const fallbackTitle = (e.title || "").trim().toLowerCase();
-  //         return fallbackTitle.includes(eventTitle) || 
-  //                eventTitle.includes(fallbackTitle);
-  //       });
-  //       if (matchingEvent) {
-  //         console.log("✅ FOUND by substring title match");
-  //       }
-  //     }
-      
-  //     if (matchingEvent) {
-  //       console.log("📄 Fallback title:", matchingEvent.title);
-  //       console.log("📄 Received title:", eventObj.title);
-  //       console.log("📊 Using fallback data with complete province information");
-        
-  //       // Count voters in fallback to verify it has data
-  //       const totalVoters = matchingEvent.votes?.reduce((sum, v) => 
-  //         sum + (v.voters?.length || 0), 0
-  //       ) || 0;
-  //       console.log(`👥 Fallback event has ${totalVoters} voters`);
-        
-  //       // Use the fallback data (which has province info)
-  //       const normalized = normalizeVoteStructure(matchingEvent);
-  //       setSelectedEvent(normalized);
-  //       return;
-  //     } else {
-  //       console.warn("⚠️ No matching event found in fallback JSON");
-  //       console.log("🔍 Looking for:");
-  //       console.log("  - ID:", eventObj.id || "(not provided)");
-  //       console.log("  - Title:", eventObj.title || "(not provided)");
-  //       console.log("\n📋 Available events in fallback:");
-  //       fallbackEvents.forEach((e, i) => {
-  //         console.log(`  ${i + 1}. [${e.id}] ${e.title}`);
-  //       });
-  //       console.log("\n⚠️ Using provided eventObj (may have incomplete province data)");
-        
-  //       // Fall back to using the provided event
-  //       const normalized = normalizeVoteStructure(eventObj);
-  //       setSelectedEvent(normalized);
-  //     }
-  //   }
-
-  //   // Try to fetch from GraphQL as backup
-  //   (async () => {
-  //     try {
-  //       const controller = new AbortController();
-  //       const timeoutId = setTimeout(() => controller.abort(), 10000);
-        
-  //       const res = await fetch(GQL_ENDPOINT, {
-  //         method: "POST",
-  //         headers: { "content-type": "application/json" },
-  //         body: JSON.stringify({ query: GQL_QUERY }),
-  //         signal: controller.signal,
-  //       });
-        
-  //       clearTimeout(timeoutId);
-
-  //       let events = [];
-  //       if (res.ok) {
-  //         const json = await res.json();
-  //         events = coerceFallbackEvents(json);
-  //       } else {
-  //         throw new Error("GraphQL error");
-  //       }
-
-  //       if (!mounted) return;
-        
-  //       // Only update rawEvents if we got more data
-  //       if (events.length > 0) {
-  //         setRawEvents(events);
-  //       }
-
-  //       // Only set selectedEvent if we don't have eventObj
-  //       if (!eventObj && events.length > 0) {
-  //         console.log("✅ Using GraphQL event:", events[0]);
-  //         setSelectedEvent(events[0]);
-  //       }
-  //     } catch (err) {
-  //       console.warn("GraphQL failed, using fallback JSON:", err);
-        
-  //       if (!mounted) return;
-        
-  //       // Only set selectedEvent if we don't have eventObj
-  //       if (!eventObj && fallbackEvents.length > 0) {
-  //         setSelectedEvent(fallbackEvents[0]);
-  //       }
-  //     }
-  //   })();
-
-  //   return () => (mounted = false);
-  // }, [eventObj]);
-
   useEffect(() => {
   let mounted = true;
 
   async function run() {
-    console.log("📥 Loading local fallback voteEvents…");
+    console.log("Loading local fallback voteEvents…");
     const fallbackEvents = await loadVoteEventsFallback();
 
     if (!mounted) return;
@@ -497,7 +380,7 @@ export default function GeoPoliticalViewer({
     setRawEvents(fallbackEvents);
 
     if (eventObj) {
-      console.log("🔍 Received eventObj:", eventObj);
+      console.log("Received eventObj:", eventObj);
 
       // --- match by ID ---
       let matchingEvent =
@@ -520,12 +403,12 @@ export default function GeoPoliticalViewer({
       }
 
       if (matchingEvent) {
-        console.log("🌟 Using fallback match:", matchingEvent);
+        console.log("sing fallback match:", matchingEvent);
         setSelectedEvent(normalizeVoteStructure(matchingEvent));
         return;
       }
 
-      console.warn("⚠️ No fallback match found → using eventObj");
+      console.warn("No fallback match found → using eventObj");
       setSelectedEvent(normalizeVoteStructure(eventObj));
     }
   }
@@ -564,6 +447,7 @@ export default function GeoPoliticalViewer({
   function buildStatsByProvince(event) {
     const featureByName = featureByNameRef.current;
     const keyToName = keyToNameRef.current;
+    console.log("event ", event);
 
     const out = {};
     const votes = (event && event.votes) || [];
