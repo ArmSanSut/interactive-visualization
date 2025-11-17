@@ -1,3 +1,4 @@
+import "./global.css";
 import React from "react";
 import VisMain from "./features/VisMain.jsx";
 
