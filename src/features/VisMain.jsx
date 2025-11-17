@@ -27,10 +27,7 @@ import { loadFallback } from "../data/fallbackLoader.js";
 
 // ----- ENDPOINTS + QUERY -----
 const ENDPOINTS = [
-  "https://thingproxy.freeboard.io/fetch/https://politigraph.wevis.info/graphql",
   "https://corsproxy.io/?https://politigraph.wevis.info/graphql",
-  "https://cors.isomorphic-git.org/https://politigraph.wevis.info/graphql",
-  "https://politigraph.wevis.info/graphql",
 ];
 
 const GQL_QUERY = `query CombinedQuery {
@@ -95,7 +92,6 @@ export default function VisMain() {
   const [compareOpen, setCompareOpen] = useState(false);
   const [selectedMP, setSelectedMP] = useState(null);
 
-
   // Canonical party lookup
   function canonicalPartyFor(name, rawParty) {
     if (isValidName(name) && mpPartyCanon.has(name))
@@ -131,7 +127,6 @@ export default function VisMain() {
   // ---- ROUTING from circle click (stable callback) ----
   const navigateToInteraction = useCallback(
     (veId) => {
-      console.log("click on circle", veId);
       if (!veId || navigatingRef.current) return;
       navigatingRef.current = true; // guard against double clicks in D3
       // microtask defers out of D3's event tick without setTimeout-jank
@@ -144,82 +139,29 @@ export default function VisMain() {
     },
     [navigate, startTransition]
   );
-
+  
   useEffect(() => {
     let alive = true;
+
     async function run() {
-      setStatus("⏳ Loading from GraphQL …");
+      setStatus("⏳ Loading (FAST MODE: fallback first)…");
 
-      const bodyJSON = JSON.stringify({
-        query: GQL_QUERY,
-        operationName: "CombinedQuery",
-      });
-      let okData = null;
-      let used = null;
-      const errors = [];
+      // 🔥 1) โหลด fallback JSON โดยตรง
+      const fb = await loadFallback(FALLBACK_URLS.combined);
 
-      for (const url of ENDPOINTS) {
-        const POST_CFG = {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: bodyJSON,
-        };
-        const GET_URL =
-          url +
-          "?query=" +
-          encodeURIComponent(GQL_QUERY) +
-          "&operationName=CombinedQuery";
-        const GET_CFG = {
-          method: "GET",
-          headers: { },
-        };
-
-        const attempts = [
-          { u: url, cfg: POST_CFG, label: "POST" },
-          { u: GET_URL, cfg: GET_CFG, label: "GET" },
-        ];
-
-        for (const { u, cfg, label } of attempts) {
-          try {
-            const res = await fetchWithTimeout(u, cfg, 3000);
-            const text = await res.text();
-            if (res.status >= 500) throw new Error("HTTP " + res.status); // fallback on 5xx
-            const json = JSON.parse(text);
-            if (json.data) {
-              okData = json.data;
-              used = `${u} (${label})`;
-              break;
-            }
-          } catch (e) {
-            errors.push(`✗ ${u}: ${e.message}`);
-          }
-        }
-        if (okData) break;
+      if (!fb || !fb.data) {
+        setStatus("❌ Failed: fallback JSON not found");
+        return;
       }
 
-      // Fallback JSON when all attempts fail
-      if (!okData) {
-        console.warn("⚠️ API failed → loading local fallback");
-
-        const fb = await loadFallback(FALLBACK_URLS.combined);
-        console.log("fallback", fb);
-        if (fb?.data) {
-          okData = fb.data;
-          used = "local: combined_fallback.json";
-        } else {
-          setStatus("❌ Failed: No API & no fallback available");
-          return;
-        }
-      }
-
-      if (!alive) return;
-
+      const okData = fb.data;
       const ve = okData.voteEvents || [];
       const be = okData.billEnforceEvents || [];
 
-      // Normalize enforced bills (unique by normalized title + end_date)
+      if (!alive) return;
+
+      // 🔥 2) processing เหมือนเดิมทุกบรรทัด (นายไม่ต้องแก้)
+      // --- Normalize enforced bills ---
       const enforced = [];
       const seenKey = new Set();
       be.forEach((b) => {
@@ -235,7 +177,7 @@ export default function VisMain() {
         }
       });
 
-      // Match vote events to enforced bills
+      // --- Match vote events to enforced bills ---
       const map = new Map();
       enforced.forEach((b) => map.set(b.title, []));
       const matched = [];
@@ -265,7 +207,7 @@ export default function VisMain() {
         }
       }
 
-      // Canonical party per MP
+      // --- Canonical party per MP ---
       const counter = new Map();
       matched.forEach((ev) => {
         (ev.votes || []).forEach((v) => {
@@ -277,6 +219,7 @@ export default function VisMain() {
           m.set(p, (m.get(p) || 0) + 1);
         });
       });
+
       const canon = new Map();
       counter.forEach((m, name) => {
         let best = "อื่นๆ",
@@ -290,21 +233,25 @@ export default function VisMain() {
         canon.set(name, best);
       });
 
+      // 🔥 3) set states
       if (!alive) return;
       setBillList(enforced);
       setBillToVotes(map);
       setRawMatchedVEs(matched);
       setMpPartyCanon(canon);
-      setLastProxy(used);
+
+      setLastProxy("local fallback (FAST MODE)");
       setStatus(
-        `✅ Loaded enforced=${enforced.length}, matched=${matched.length} • ${used}`
+        `✅ Loaded (FAST MODE) enforced=${enforced.length}, matched=${matched.length}`
       );
 
+      // auto-select first bill
       if (enforced.length && !selectedBill) {
         setSelectedBill(enforced[0].title);
         setRefreshKey((k) => k + 1);
       }
     }
+
     run();
     return () => {
       alive = false;
@@ -338,7 +285,6 @@ export default function VisMain() {
     return all.map((ev) => {
       const votes = (ev.votes || []).filter((v) => {
         const party = normalizePartyName(v.voter_party);
-        console.log(party);
         const okParty = !partyFilter.length || partyFilter.includes(party);
         const okMP = !mpFilter.length || mpFilter.includes(v.voter_name);
         return okParty && okMP;

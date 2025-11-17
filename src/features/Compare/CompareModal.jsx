@@ -8,9 +8,6 @@ import {
 } from "./queryUtils";
 import "./CompareModal.css";
 
-/* =========================
-   Utilities
-   ========================= */
 
 function fmtDate(iso) {
   const d = new Date(iso);
@@ -66,6 +63,9 @@ function fmtDuration(y, m) {
 /* ========= globals (shared state) ========= */
 
 let aggGlobal = null;
+const compareCache = new Map(); // fullName -> { events, rows, agg }
+let profilesCache = null;
+let orgsCache = null;
 let profilesGlobal = null;
 let organizationsGlobal = [];
 let totalEventsGlobal = 0;
@@ -1442,9 +1442,7 @@ function renderAllFromGlobals(fullNameProp) {
   console.log("🎯 Central candidate:", centralName);
 
   // Filter connections: A_name = central
-  let joined = joinedAll.filter(
-    (r) => (r.A_name || "").trim() === centralName
-  );
+  let joined = joinedAll.filter((r) => (r.A_name || "").trim() === centralName);
   console.log("📊 Filtered connections (as A):", joined.length);
 
   // ถ้าไม่มีเลย ลองหาว่าเขาเคยโผล่ในฝั่ง B บ้างไหม แล้ว swap
@@ -1525,44 +1523,58 @@ function handleResizeCompare() {
   }
 }
 
-/* ========= Safe fetch with fallback ========= */
-
-async function safeFetchCompareEvents(fullName) {
-  const trimmed = (fullName || "").trim();
-  const [firstname = "", lastname = ""] = trimmed.split(/\s+/, 2);
-  try {
-    const res = await fetchCompareEvents(firstname, lastname);
-    // ถ้า API ตอบกลับแต่ไม่มี events เลย ให้ถือว่าใช้ข้อมูลจริงแต่โล่ง
-    if (res && Array.isArray(res.events)) return res;
-    console.warn("⚠️ CompareEvents response invalid, using mock instead");
-    return mockCompareData();
-  } catch (err) {
-    console.error("❌ CompareEvents API error, using mock data", err);
-    return mockCompareData();
-  }
-}
-
 async function safeFetchProfiles() {
+  if (profilesCache) return profilesCache;
   try {
     const res = await fetchProfiles();
-    if (res && Array.isArray(res.people)) return res;
-    console.warn("⚠️ Profiles response invalid, using mock instead");
-    return mockProfilesData();
-  } catch (err) {
-    console.error("❌ Profiles API error, using mock data", err);
-    return mockProfilesData();
+    if (res && Array.isArray(res.people)) {
+      profilesCache = res;
+      return res;
+    }
+    profilesCache = mockProfilesData();
+    return profilesCache;
+  } catch {
+    profilesCache = mockProfilesData();
+    return profilesCache;
   }
 }
 
 async function safeFetchOrganizations() {
+  if (orgsCache) return orgsCache;
   try {
     const res = await fetchOrganizations();
-    if (res && Array.isArray(res.organizations)) return res;
-    console.warn("⚠️ Orgs response invalid, using mock instead");
-    return mockOrgsData();
-  } catch (err) {
-    console.error("❌ Orgs API error, using mock data", err);
-    return mockOrgsData();
+    if (res && Array.isArray(res.organizations)) {
+      orgsCache = res;
+      return res;
+    }
+    orgsCache = mockOrgsData();
+    return orgsCache;
+  } catch {
+    orgsCache = mockOrgsData();
+    return orgsCache;
+  }
+}
+
+async function safeFetchCompareEvents(fullName) {
+  const key = fullName.trim();
+  if (compareCache.has(key)) {
+    return compareCache.get(key);
+  }
+
+  const [firstname = "", lastname = ""] = key.split(/\s+/, 2);
+  try {
+    const res = await fetchCompareEvents(firstname, lastname);
+    if (res && Array.isArray(res.events)) {
+      compareCache.set(key, res);
+      return res;
+    }
+    const fallback = mockCompareData();
+    compareCache.set(key, fallback);
+    return fallback;
+  } catch {
+    const fallback = mockCompareData();
+    compareCache.set(key, fallback);
+    return fallback;
   }
 }
 
@@ -1582,6 +1594,8 @@ export default function CompareModal({ open, onClose, fullName }) {
         setLoading(true);
         setErr("");
 
+        const cacheKey = (fullName || "").trim();
+
         const [cmp, prof, orgs] = await Promise.all([
           safeFetchCompareEvents(fullName),
           safeFetchProfiles(),
@@ -1594,10 +1608,48 @@ export default function CompareModal({ open, onClose, fullName }) {
         const people = prof?.people ?? [];
         const organizations = orgs?.organizations ?? [];
 
+        if (!profilesCache) profilesCache = prof;
+        if (!orgsCache) orgsCache = orgs;
+
+        if (
+          compareCache.has(cacheKey) &&
+          compareCache.get(cacheKey)._precomputed
+        ) {
+          const { rows, agg, images } = compareCache.get(cacheKey);
+          aggGlobal = agg;
+          imageIndexGlobal = images;
+        } else {
+          const rows = flattenCompareRows(events);
+          const agg = aggregatePairs(rows);
+          const images = buildImageIndex(rows);
+
+          compareCache.set(cacheKey, {
+            events,
+            rows,
+            agg,
+            images,
+            _precomputed: true,
+          });
+
+          aggGlobal = agg;
+          imageIndexGlobal = images;
+        }
+
+        // ---- Profiles global ----
+        if (!profilesGlobal) {
+          profilesGlobal = flattenProfiles(people);
+        }
+
+        organizationsGlobal = organizations;
+
         const rows = flattenCompareRows(events);
         aggGlobal = aggregatePairs(rows);
         imageIndexGlobal = buildImageIndex(rows);
-        profilesGlobal = flattenProfiles(people);
+
+        // profilesGlobal = flattenProfiles(people);
+        if (!profilesGlobal) {
+          profilesGlobal = flattenProfiles(people);
+        }
         organizationsGlobal = organizations;
 
         console.log(
@@ -1636,6 +1688,17 @@ export default function CompareModal({ open, onClose, fullName }) {
       if (graphSvgEl) d3.select(graphSvgEl).selectAll("*").remove();
       if (peersSvgEl) d3.select(peersSvgEl).selectAll("*").remove();
       hideNodeCard();
+
+      aggGlobal = null;
+      profilesGlobal = null;
+      organizationsGlobal = [];
+      totalEventsGlobal = 0;
+      profilesIndexByName = new Map();
+      imageIndexGlobal = new Map();
+      joinedGlobal = [];
+      selectedNameGlobal = null;
+      selectedIsAGlobal = false;
+      centralNameGlobal = "";
     };
   }, [open, fullName]);
 
@@ -1785,25 +1848,19 @@ function mockCompareData() {
             id: "b1",
             option: "เห็นด้วย",
             voter_party: "พรรค ข",
-            voters: [
-              { firstname: "สมชาย", lastname: "ใจดี", image: "" },
-            ],
+            voters: [{ firstname: "สมชาย", lastname: "ใจดี", image: "" }],
           },
           {
             id: "b2",
             option: "ไม่เห็นด้วย",
             voter_party: "พรรค ก",
-            voters: [
-              { firstname: "ศิริพร", lastname: "วงศ์ดี", image: "" },
-            ],
+            voters: [{ firstname: "ศิริพร", lastname: "วงศ์ดี", image: "" }],
           },
           {
             id: "b3",
             option: "เห็นด้วย",
             voter_party: "พรรค ค",
-            voters: [
-              { firstname: "ธเนศ", lastname: "อินทร์ศิลา", image: "" },
-            ],
+            voters: [{ firstname: "ธเนศ", lastname: "อินทร์ศิลา", image: "" }],
           },
         ],
       },
@@ -1824,17 +1881,13 @@ function mockCompareData() {
             id: "b4",
             option: "เห็นด้วย",
             voter_party: "พรรค ข",
-            voters: [
-              { firstname: "สมชาย", lastname: "ใจดี", image: "" },
-            ],
+            voters: [{ firstname: "สมชาย", lastname: "ใจดี", image: "" }],
           },
           {
             id: "b5",
             option: "งดออกเสียง",
             voter_party: "พรรค ค",
-            voters: [
-              { firstname: "ธเนศ", lastname: "อินทร์ศิลา", image: "" },
-            ],
+            voters: [{ firstname: "ธเนศ", lastname: "อินทร์ศิลา", image: "" }],
           },
         ],
       },
