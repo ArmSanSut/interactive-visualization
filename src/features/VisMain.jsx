@@ -64,6 +64,8 @@ export default function VisMain() {
   const partyLegendRef = useRef(null);
   const miniGraphsRef = useRef(null);
   const tooltipRef = useRef(null);
+  const firstRender = useRef(true);
+  const userClickedVE = useRef(false);
 
   // Router
   const navigate = useNavigate();
@@ -92,12 +94,15 @@ export default function VisMain() {
   const [compareOpen, setCompareOpen] = useState(false);
   const [selectedMP, setSelectedMP] = useState(null);
 
-  // Canonical party lookup
-  function canonicalPartyFor(name, rawParty) {
-    if (isValidName(name) && mpPartyCanon.has(name))
-      return mpPartyCanon.get(name);
-    return normalizePartyName(rawParty);
-  }
+  // Canonical party lookup (stable)
+  const canonicalPartyFor = useCallback(
+    (name, rawParty) => {
+      if (isValidName(name) && mpPartyCanon.has(name))
+        return mpPartyCanon.get(name);
+      return normalizePartyName(rawParty);
+    },
+    [mpPartyCanon]
+  );
 
   function openGeoModal(ev) {
     setGeoEvent(ev || null);
@@ -129,7 +134,6 @@ export default function VisMain() {
     (veId) => {
       if (!veId || navigatingRef.current) return;
       navigatingRef.current = true; // guard against double clicks in D3
-      // microtask defers out of D3's event tick without setTimeout-jank
       queueMicrotask(() => {
         startTransition(() => {
           navigate(`/interaction/${veId}`);
@@ -139,14 +143,182 @@ export default function VisMain() {
     },
     [navigate, startTransition]
   );
-  
+
+  // ---- Vote color mapping (stable) ----
+  const VOTE_COLOR = useCallback((v) => {
+    const styles = getComputedStyle(document.documentElement);
+    return v === "yes"
+      ? styles.getPropertyValue("--yes").trim() || "#2ca02c"
+      : v === "no"
+      ? styles.getPropertyValue("--no").trim() || "#d62728"
+      : styles.getPropertyValue("--oth") || "#999";
+  }, []);
+
+  // ---- Mini radial drawer (uses refs directly) ----
+  const drawMiniRadial = useCallback(
+    (list) => {
+      if (!miniGraphsRef.current) return;
+      const container = d3.select(miniGraphsRef.current);
+      const tip = d3.select(tooltipRef.current);
+      container.html("");
+
+      const ves = [...list].sort((a, b) => {
+        const da = a.end_date
+          ? new Date(a.end_date)
+          : a.start_date
+          ? new Date(a.start_date)
+          : new Date(0);
+        const db = b.end_date
+          ? new Date(b.end_date)
+          : b.start_date
+          ? new Date(b.start_date)
+          : new Date(0);
+        return db - da;
+      });
+
+      ves.forEach((ev) => {
+        const card = container
+          .append("div")
+          .attr("class", "card-vismain")
+          .attr("tabindex", 0)
+          .style("cursor", "pointer")
+          .on("click", () => openGeoModal(ev))
+          .on("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              openGeoModal(ev);
+            }
+          });
+
+        card.append("div").attr("class", "title").text(ev.title);
+
+        const w = 560;
+        const h = 460;
+        const cx = w / 2;
+        const cy = h / 2;
+
+        const svg2 = card
+          .append("svg")
+          .attr("width", w)
+          .attr("height", h)
+          .style("background", "#fff")
+          .style("display", "block")
+          .style("overflow", "visible");
+
+        svg2
+          .append("rect")
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", w)
+          .attr("height", h)
+          .attr("fill", "#fff")
+          .attr("stroke", "#eee")
+          .attr("stroke-width", 1);
+
+        const root2 = svg2
+          .append("g")
+          .attr("transform", `translate(${cx},${cy})`);
+        const layerLinks = root2.append("g");
+        const layerNodes = root2.append("g");
+
+        const mps = [];
+        (ev.votes || []).forEach((v) => {
+          if (!isValidName(v.voter_name)) return;
+          const p = canonicalPartyFor(v.voter_name, v.voter_party);
+          const t = classifyVote(v.option);
+          mps.push({ name: v.voter_name, party: p, type: t });
+        });
+
+        const R = 190;
+        const mpNodes = mps.map((m, i) => {
+          const ang = -Math.PI + (i / Math.max(1, mps.length)) * 2 * Math.PI;
+          return {
+            id: `M:${m.name}#VE:${ev.id}`,
+            name: m.name,
+            party: m.party,
+            type: m.type,
+            x: R * Math.cos(ang),
+            y: R * Math.sin(ang),
+          };
+        });
+
+        const mpLinks = mpNodes.map((m) => ({
+          source: { x: 0, y: 0 },
+          target: m,
+          type: m.type,
+        }));
+
+        layerLinks
+          .selectAll("line")
+          .data(mpLinks)
+          .join("line")
+          .attr("x1", 0)
+          .attr("y1", 0)
+          .attr("x2", (d) => d.target.x)
+          .attr("y2", (d) => d.target.y)
+          .attr("stroke", (d) => VOTE_COLOR(d.type))
+          .attr("stroke-width", 1.1)
+          .attr("stroke-opacity", 0.9);
+
+        layerNodes
+          .append("g")
+          .attr("transform", "translate(0,0)")
+          .append("circle")
+          .attr("r", 8.8)
+          .attr("fill", "#555");
+
+        const gMP = layerNodes
+          .selectAll("g.mp")
+          .data(mpNodes)
+          .join("g")
+          .attr("class", "mp")
+          .attr("transform", (d) => `translate(${d.x},${d.y})`);
+
+        gMP
+          .append("circle")
+          .attr("r", 5)
+          .attr("fill", (d) => partyColor(d.party))
+          .attr("stroke", "#fff")
+          .attr("stroke-width", 0.9);
+
+        gMP
+          .on("mouseover", (e, d) => {
+            tip
+              .html(
+                `<b>ส.ส.</b> ${d.name}<br>` +
+                  `พรรค: ${d.party}<br>` +
+                  `โหวต: ${
+                    d.type === "yes"
+                      ? "เห็นชอบ"
+                      : d.type === "no"
+                      ? "ไม่เห็นชอบ"
+                      : "อื่น ๆ"
+                  }`
+              )
+              .style("left", e.clientX + 12 + "px")
+              .style("top", e.clientY - 12 + "px")
+              .style("visibility", "visible");
+          })
+          .on("mousemove", (e) =>
+            tip
+              .style("left", e.clientX + 12 + "px")
+              .style("top", e.clientY - 12 + "px")
+          )
+          .on("mouseout", () => tip.style("visibility", "hidden"));
+      });
+    },
+    [miniGraphsRef, tooltipRef, canonicalPartyFor, VOTE_COLOR]
+  );
+
+  // ============================================================================
+  // Load data (fallback-first)
+  // ============================================================================
   useEffect(() => {
     let alive = true;
 
     async function run() {
       setStatus("⏳ Loading (FAST MODE: fallback first)…");
 
-      // 🔥 1) โหลด fallback JSON โดยตรง
       const fb = await loadFallback(FALLBACK_URLS.combined);
 
       if (!fb || !fb.data) {
@@ -160,7 +332,6 @@ export default function VisMain() {
 
       if (!alive) return;
 
-      // 🔥 2) processing เหมือนเดิมทุกบรรทัด (นายไม่ต้องแก้)
       // --- Normalize enforced bills ---
       const enforced = [];
       const seenKey = new Set();
@@ -222,8 +393,8 @@ export default function VisMain() {
 
       const canon = new Map();
       counter.forEach((m, name) => {
-        let best = "อื่นๆ",
-          b = -1;
+        let best = "อื่นๆ";
+        let b = -1;
         m.forEach((c, p) => {
           if (c > b) {
             b = c;
@@ -233,7 +404,6 @@ export default function VisMain() {
         canon.set(name, best);
       });
 
-      // 🔥 3) set states
       if (!alive) return;
       setBillList(enforced);
       setBillToVotes(map);
@@ -319,7 +489,7 @@ export default function VisMain() {
         setRefreshKey((k) => k + 1);
       }
     }
-  }, [filteredBillOptions]);
+  }, [filteredBillOptions, selectedBill]);
 
   // ============================================================================
   // Main D3 rendering
@@ -366,8 +536,8 @@ export default function VisMain() {
     const orderVote = { yes: 0, no: 1, other: 2 };
 
     // Aggregations
-    const partyAggByVE = new Map(); // veId -> Map(party -> {yes,no,other,total, mpSet:Set})
-    const mpByVE = new Map(); // veId -> array of {name,party,type}
+    const partyAggByVE = new Map();
+    const mpByVE = new Map();
 
     eventsForBill.forEach((ev) => {
       const veId = "VE:" + ev.id;
@@ -409,8 +579,8 @@ export default function VisMain() {
     };
 
     const BASE_R_VE = Math.min(W, H) * 0.2;
-    const LAYER_STEP = 14,
-      LAYER_WOBBLE = 8;
+    const LAYER_STEP = 14;
+    const LAYER_WOBBLE = 8;
 
     const veNodes = eventsForBill.map((ev, i) => {
       const n = Math.max(1, eventsForBill.length);
@@ -419,8 +589,8 @@ export default function VisMain() {
         BASE_R_VE +
         i * LAYER_STEP +
         (i % 2 === 0 ? +LAYER_WOBBLE : -LAYER_WOBBLE);
-      const x = cx + r * Math.cos(ang),
-        y = cy + r * Math.sin(ang);
+      const x = cx + r * Math.cos(ang);
+      const y = cy + r * Math.sin(ang);
       return {
         id: "VE:" + ev.id,
         group: "ve",
@@ -454,8 +624,8 @@ export default function VisMain() {
       parties.forEach((p, idx) => {
         const ang = start + idx * spread + (idx % 2 ? 0.03 : -0.03);
         const r = rScale(Math.max(1, pmap.get(p)?.mpSet?.size || 1));
-        const x = cx + R_P_BASE * Math.cos(ang),
-          y = cy + R_P_BASE * Math.sin(ang);
+        const x = cx + R_P_BASE * Math.cos(ang);
+        const y = cy + R_P_BASE * Math.sin(ang);
         const nodeId = `P:${p}#${veNode.id}`;
         const pn = {
           id: nodeId,
@@ -602,10 +772,10 @@ export default function VisMain() {
         const ev = eventsForBill.find((x) => "VE:" + x.id === d.id);
         if (!ev) return;
         const when = ev?.end_date || ev?.start_date || "";
-        let yes = 0,
-          no = 0,
-          oth = 0,
-          total = 0;
+        let yes = 0;
+        let no = 0;
+        let oth = 0;
+        let total = 0;
         (ev.votes || []).forEach((v) => {
           const vt = classifyVote(v.option);
           if (vt === "yes") yes++;
@@ -648,7 +818,6 @@ export default function VisMain() {
           (p) => p.raw === FOCUS.party && p.ve === FOCUS.veId
         );
         if (pn) {
-          // Animate party node back to original position
           gParty
             .filter((d) => d.id === pn.id)
             .transition()
@@ -656,7 +825,6 @@ export default function VisMain() {
             .ease(d3.easeCubicOut)
             .attr("transform", `translate(${pn.homeX},${pn.homeY})`);
 
-          // Animate the line back
           gVP
             .filter((l) => l.target.id === pn.id)
             .transition()
@@ -665,7 +833,6 @@ export default function VisMain() {
             .attr("x2", pn.homeX)
             .attr("y2", pn.homeY);
 
-          // Reset position
           pn.x = pn.homeX;
           pn.y = pn.homeY;
         }
@@ -683,28 +850,39 @@ export default function VisMain() {
       gParty.classed("focused", false);
       gVP.classed("faded", false);
       gENVE.classed("faded", false);
+
+      // redraw mini-radial for current filtered VE list
       drawMiniRadial(eventsForBill);
     }
 
     function toggleFocusVE(veNode) {
+      // only when user actually clicked VE
+      if (!userClickedVE.current) return;
+
       if (FOCUS && FOCUS.mode === "ve" && FOCUS.veId === veNode.id) {
         clearFocus();
+        userClickedVE.current = false;
         return;
       }
       FOCUS = { mode: "ve", veId: veNode.id };
+
       gEN.classed("faded", true);
       gVE.classed("faded", (d) => d.id !== veNode.id);
       gParty.classed("faded", (d) => d.ve !== veNode.id);
       gVP.classed("faded", (l) => l.source.id !== veNode.id);
       gENVE.classed("faded", (l) => l.target.id !== veNode.id);
+
       if (mpSim) {
         mpSim.stop();
         mpSim = null;
       }
       layerVM.selectAll("*").remove();
+
       const evID = veNode.id.replace("VE:", "");
       const selectedEvent = eventsForBill.find((e) => String(e.id) === evID);
       if (selectedEvent) drawMiniRadial([selectedEvent]);
+
+      userClickedVE.current = false;
     }
 
     function toggleFocusParty(pn) {
@@ -715,7 +893,6 @@ export default function VisMain() {
         FOCUS.veId === pn.ve
       ) {
         clearFocus();
-        // Return party node to original position
         gParty
           .filter((d) => d.id === pn.id)
           .transition()
@@ -729,8 +906,8 @@ export default function VisMain() {
         mode: "party",
         veId: pn.ve,
         party: pn.raw,
-        x: CENTER_X, // Use center instead of pn.x
-        y: CENTER_Y, // Use center instead of pn.y
+        x: CENTER_X,
+        y: CENTER_Y,
         originalX: pn.x,
         originalY: pn.y,
       };
@@ -745,7 +922,6 @@ export default function VisMain() {
       );
       gENVE.classed("faded", true);
 
-      // Animate party node to center
       gParty
         .filter((d) => d.id === pn.id)
         .transition()
@@ -753,12 +929,10 @@ export default function VisMain() {
         .ease(d3.easeCubicOut)
         .attr("transform", `translate(${CENTER_X},${CENTER_Y})`)
         .on("end", () => {
-          // Update temporary position for dragging
           pn.x = CENTER_X;
           pn.y = CENTER_Y;
         });
 
-      // Animate the connecting line to follow
       gVP
         .filter((l) => l.target.id === pn.id)
         .transition()
@@ -769,7 +943,6 @@ export default function VisMain() {
 
       layerVM.selectAll("*").remove();
 
-      // Small delay to let the animation start before showing MPs
       setTimeout(() => {
         updateMPPositions({ ...pn, x: CENTER_X, y: CENTER_Y });
       }, 300);
@@ -806,7 +979,6 @@ export default function VisMain() {
         .on("end", function (ev, d) {
           d3.select(this).style("cursor", "pointer");
 
-          // Determine target position based on focus state
           const targetX =
             FOCUS &&
             FOCUS.mode === "party" &&
@@ -822,8 +994,8 @@ export default function VisMain() {
               ? CENTER_Y
               : d.homeY;
 
-          const x0 = d.x,
-            y0 = d.y;
+          const x0 = d.x;
+          const y0 = d.y;
 
           const sel = d3.select(this);
           sel
@@ -862,17 +1034,37 @@ export default function VisMain() {
       const mpList = (mpByVE.get(pn.ve) || []).filter(
         (m) => m.party === pn.raw
       );
-      const cx = pn.x,
-        cy = pn.y;
 
-      const nodes = mpList.map((m) => ({
-        id: `M:${m.name}#${pn.ve}`,
-        name: m.name,
-        party: m.party,
-        type: m.type,
-        x: cx + Math.random() * 2,
-        y: cy + Math.random() * 2,
-      }));
+      const cx = pn.x;
+      const cy = pn.y;
+
+      const total = mpList.length;
+      const BASE = 80; 
+      const SCALE = 2.1; 
+      const R = BASE + total * SCALE;
+
+      const jitter = 5;
+      const startRot = (pn.raw.charCodeAt(0) % 360) * (Math.PI / 180);
+
+      const nodes = mpList.map((m, i) => {
+        const ang = startRot + (i / total) * 2 * Math.PI;
+
+        const radius = R + (Math.random() * jitter * 2 - jitter);
+
+        const x = cx + radius * Math.cos(ang);
+        const y = cy + radius * Math.sin(ang);
+
+        return {
+          id: `M:${m.name}#${pn.ve}`,
+          name: m.name,
+          party: m.party,
+          type: m.type,
+          x,
+          y,
+          ang,
+        };
+      });
+
       const links = nodes.map((n) => ({
         source: { x: pn.x, y: pn.y },
         target: n,
@@ -881,28 +1073,33 @@ export default function VisMain() {
 
       layerVM.selectAll("*").remove();
 
-      const gLinks = layerVM
+      layerVM
         .append("g")
         .attr("class", "mp-links")
         .selectAll("line")
         .data(links)
         .join("line")
         .attr("stroke", (d) => VOTE_COLOR(d.type))
+        .attr("stroke-width", 2)
         .attr("stroke-opacity", 0.9)
-        .attr("stroke-width", 2);
+        .attr("x1", pn.x)
+        .attr("y1", pn.y)
+        .attr("x2", (d) => d.target.x)
+        .attr("y2", (d) => d.target.y);
 
-      const gNodes = layerVM
+      layerVM
         .append("g")
         .attr("class", "mp-nodes")
         .selectAll("circle")
         .data(nodes)
         .join("circle")
-        .attr("r", 10)
+        .attr("r", 11)
         .attr("fill", (d) => partyColor(d.party))
         .attr("stroke", "#fff")
         .attr("stroke-width", 1.5)
         .style("cursor", "pointer")
-        // Add mouseover events here!
+        .attr("cx", (d) => d.x)
+        .attr("cy", (d) => d.y)
         .on("click", (e, d) => {
           e.stopPropagation();
           openCompareModal(d);
@@ -930,21 +1127,6 @@ export default function VisMain() {
             .style("top", e.clientY - 12 + "px")
         )
         .on("mouseout", () => tip.style("visibility", "hidden"));
-
-      mpSim = d3
-        .forceSimulation(nodes)
-        .force("center", d3.forceCenter(cx, cy))
-        .force("radial", d3.forceRadial(250, cx, cy).strength(0.25))
-        .force("charge", d3.forceManyBody().strength(-6))
-        .force("collide", d3.forceCollide(11))
-        .on("tick", () => {
-          gLinks
-            .attr("x1", pn.x)
-            .attr("y1", pn.y)
-            .attr("x2", (d) => d.target.x)
-            .attr("y2", (d) => d.target.y);
-          gNodes.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
-        });
     }
 
     function enableVEDrag() {
@@ -962,8 +1144,8 @@ export default function VisMain() {
             .filter((l) => l.target.id === ve.id)
             .attr("x2", ve.x)
             .attr("y2", ve.y);
-          const dx = ve.x - ve.homeX,
-            dy = ve.y - ve.homeY;
+          const dx = ve.x - ve.homeX;
+          const dy = ve.y - ve.homeY;
           layerNode
             .selectAll("g.party")
             .filter((p) => p.ve === ve.id)
@@ -1000,10 +1182,10 @@ export default function VisMain() {
         })
         .on("end", function (ev, ve) {
           d3.select(this).style("cursor", "pointer");
-          const x0 = ve.x,
-            y0 = ve.y,
-            x1 = ve.homeX,
-            y1 = ve.homeY;
+          const x0 = ve.x;
+          const y0 = ve.y;
+          const x1 = ve.homeX;
+          const y1 = ve.homeY;
           const self = d3.select(this);
           self
             .transition()
@@ -1017,8 +1199,8 @@ export default function VisMain() {
                 .filter((l) => l.target.id === ve.id)
                 .attr("x2", ve.x)
                 .attr("y2", ve.y);
-              const dx = ve.x - ve.homeX,
-                dy = ve.y - ve.homeY;
+              const dx = ve.x - ve.homeX;
+              const dy = ve.y - ve.homeY;
               layerNode
                 .selectAll("g.party")
                 .filter((p) => p.ve === ve.id)
@@ -1065,209 +1247,49 @@ export default function VisMain() {
       const pNo = (counts?.no || 0) / total;
       const pOth = (counts?.other || 0) / total;
       const maxP = Math.max(pYes, pNo, pOth);
-      const yesLight = "#76c679",
-        yesDark =
-          getComputedStyle(document.documentElement)
-            .getPropertyValue("--yes")
-            .trim() || "#2ca02c";
-      const noLight = "#e86a6a",
-        noDark =
-          getComputedStyle(document.documentElement)
-            .getPropertyValue("--no")
-            .trim() || "#d62728";
-      const otLight = "#bdbdbd",
-        otDark = "#666666";
+      const yesLight = "#76c679";
+      const yesDark =
+        getComputedStyle(document.documentElement)
+          .getPropertyValue("--yes")
+          .trim() || "#2ca02c";
+      const noLight = "#e86a6a";
+      const noDark =
+        getComputedStyle(document.documentElement)
+          .getPropertyValue("--no")
+          .trim() || "#d62728";
+      const otLight = "#bdbdbd";
+      const otDark = "#666666";
       if (maxP === pYes) return d3.interpolateRgb(yesLight, yesDark)(maxP);
       if (maxP === pNo) return d3.interpolateRgb(noLight, noDark)(maxP);
       return d3.interpolateRgb(otLight, otDark)(maxP);
     }
 
-    function drawMiniRadial(list) {
-      const container = d3.select(miniGraphsRef.current).html("");
-      const ves = [...list].sort((a, b) => {
-        const da = a.end_date
-          ? new Date(a.end_date)
-          : a.start_date
-          ? new Date(a.start_date)
-          : new Date(0);
-        const db = b.end_date
-          ? new Date(b.end_date)
-          : b.start_date
-          ? new Date(b.start_date)
-          : new Date(0);
-        return db - da;
-      });
-
-      ves.forEach((ev) => {
-        const card = container
-          .append("div")
-          .attr("class", "card-vismain")
-          .attr("tabindex", 0)
-          .style("cursor", "pointer")
-          .on("click", () => openGeoModal(ev))
-          .on("keydown", (e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              openGeoModal(ev);
-            }
-          });
-
-        card.append("div").attr("class", "title").text(ev.title);
-
-        const w = 560,
-          h = 460,
-          cx = w / 2,
-          cy = h / 2;
-        const svg2 = card
-          .append("svg")
-          .attr("width", w)
-          .attr("height", h)
-          .style("background", "#fff")
-          .style("display", "block")
-          .style("overflow", "visible");
-
-        svg2
-          .append("rect")
-          .attr("x", 0)
-          .attr("y", 0)
-          .attr("width", w)
-          .attr("height", h)
-          .attr("fill", "#fff")
-          .attr("stroke", "#eee")
-          .attr("stroke-width", 1);
-
-        const root2 = svg2
-          .append("g")
-          .attr("transform", `translate(${cx},${cy})`);
-        const layerLinks = root2.append("g");
-        const layerNodes = root2.append("g");
-
-        const mps = [];
-        (ev.votes || []).forEach((v) => {
-          if (!isValidName(v.voter_name)) return;
-          const p = canonicalPartyFor(v.voter_name, v.voter_party);
-          const t = classifyVote(v.option);
-          mps.push({ name: v.voter_name, party: p, type: t });
-        });
-
-        const R = 190;
-        const mpNodes = mps.map((m, i) => {
-          const ang = -Math.PI + (i / Math.max(1, mps.length)) * 2 * Math.PI;
-          return {
-            id: `M:${m.name}#VE:${ev.id}`,
-            name: m.name,
-            party: m.party,
-            type: m.type,
-            x: R * Math.cos(ang),
-            y: R * Math.sin(ang),
-          };
-        });
-        const mpLinks = mpNodes.map((m) => ({
-          source: { x: 0, y: 0 },
-          target: m,
-          type: m.type,
-        }));
-
-        layerLinks
-          .selectAll("line")
-          .data(mpLinks)
-          .join("line")
-          .attr("x1", 0)
-          .attr("y1", 0)
-          .attr("x2", (d) => d.target.x)
-          .attr("y2", (d) => d.target.y)
-          .attr("stroke", (d) => VOTE_COLOR(d.type))
-          .attr("stroke-width", 1.1)
-          .attr("stroke-opacity", 0.9);
-
-        layerNodes
-          .append("g")
-          .attr("transform", "translate(0,0)")
-          .append("circle")
-          .attr("r", 8.8)
-          .attr("fill", "#555");
-
-        const gMP = layerNodes
-          .selectAll("g.mp")
-          .data(mpNodes)
-          .join("g")
-          .attr("class", "mp")
-          .attr("transform", (d) => `translate(${d.x},${d.y})`);
-
-        gMP
-          .append("circle")
-          .attr("r", 5)
-          .attr("fill", (d) => partyColor(d.party))
-          .attr("stroke", "#fff")
-          .attr("stroke-width", 0.9);
-
-        gMP
-          .on("mouseover", (e, d) => {
-            tip
-              .html(
-                `<b>ส.ส.</b> ${d.name}<br>` +
-                  `พรรค: ${d.party}<br>` +
-                  `โหวต: ${
-                    d.type === "yes"
-                      ? "เห็นชอบ"
-                      : d.type === "no"
-                      ? "ไม่เห็นชอบ"
-                      : "อื่น ๆ"
-                  }`
-              )
-              .style("left", e.clientX + 12 + "px")
-              .style("top", e.clientY - 12 + "px")
-              .style("visibility", "visible");
-          })
-          .on("mousemove", (e) =>
-            tip
-              .style("left", e.clientX + 12 + "px")
-              .style("top", e.clientY - 12 + "px")
-          )
-          .on("mouseout", () => tip.style("visibility", "hidden"));
-      });
-    }
-
-    function VOTE_COLOR(v) {
-      const styles = getComputedStyle(document.documentElement);
-      return v === "yes"
-        ? styles.getPropertyValue("--yes").trim() || "#2ca02c"
-        : v === "no"
-        ? styles.getPropertyValue("--no").trim() || "#d62728"
-        : styles.getPropertyValue("--oth") || "#999";
-    }
-
-    function fitToContentsStatic(nodes, padding = 60) {
-      if (!nodes.length) return;
-      const xs = nodes.map((n) => n.x),
-        ys = nodes.map((n) => n.y);
-      const minX = Math.min(...xs) - padding,
-        maxX = Math.max(...xs) + padding;
-      const minY = Math.min(...ys) - padding,
-        maxY = Math.max(...ys) + padding;
-      const width = Math.max(1, maxX - minX),
-        height = Math.max(1, maxY - minY);
-      const k = Math.min(W / width, H / height) * 0.95;
-
-      const tx = (W * 1.15 - k * (minX + maxX)) / 2;
-      const ty = (H - k * (minY + maxY)) / 2;
-
-      root.attr("transform", `translate(${tx},${ty}) scale(${k})`);
-    }
-
     // Clicking VE node (in-canvas focus toggle)
     gVE.on("click", (e, d) => {
       e.stopPropagation();
+      userClickedVE.current = true;
       toggleFocusVE(d);
     });
 
     enablePartyDrag();
     enableVEDrag();
-    fitToContentsStatic([{ x: cx, y: cy }, ...veNodes, ...partyNodes], 60);
-    clearFocus();
+    if (!FOCUS) {
+      fitToContentsStatic([{ x: cx, y: cy }, ...veNodes, ...partyNodes], 60);
+    }
+
+    // fitToContentsStatic([{ x: cx, y: cy }, ...veNodes, ...partyNodes], 60);
+
+    if (firstRender.current) {
+      clearFocus();
+      firstRender.current = false;
+    } else {
+      // After filters change, redraw mini-radial for current VE set
+      drawMiniRadial(eventsForBill);
+    }
 
     // Additional shift to left after fitting
     setTimeout(() => {
+      if (FOCUS) return;
       const currentTransform = root.attr("transform") || "";
       const match = currentTransform.match(/translate\(([^,]+),([^)]+)\)/);
       if (match) {
@@ -1284,6 +1306,24 @@ export default function VisMain() {
       }
     }, 50);
 
+    function fitToContentsStatic(nodes, padding = 60) {
+      if (!nodes.length) return;
+      const xs = nodes.map((n) => n.x);
+      const ys = nodes.map((n) => n.y);
+      const minX = Math.min(...xs) - padding;
+      const maxX = Math.max(...xs) + padding;
+      const minY = Math.min(...ys) - padding;
+      const maxY = Math.max(...ys) + padding;
+      const width = Math.max(1, maxX - minX);
+      const height = Math.max(1, maxY - minY);
+      const k = Math.min(W / width, H / height) * 0.95;
+
+      const tx = (W * 1.15 - k * (minX + maxX)) / 2;
+      const ty = (H - k * (minY + maxY)) / 2;
+
+      root.attr("transform", `translate(${tx},${ty}) scale(${k})`);
+    }
+
     function onResize() {
       setRefreshKey((k) => k + 1);
     }
@@ -1299,6 +1339,8 @@ export default function VisMain() {
     refreshKey,
     navigateToInteraction,
     openCompareModal,
+    drawMiniRadial,
+    VOTE_COLOR,
   ]);
 
   // ============================================================================

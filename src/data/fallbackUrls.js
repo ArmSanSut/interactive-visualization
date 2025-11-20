@@ -1,5 +1,6 @@
 // src/data/fallbackUrls.js
 const base = import.meta.env.BASE_URL;  
+const root = new URL(import.meta.env.BASE_URL, window.location.origin).href;
 // base = "/interactive-visualization/" (ตาม vite.config.js)
 
 export const FALLBACK_URLS = {

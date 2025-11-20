@@ -1,10 +1,10 @@
 // src/features/Compare/queryUtils.js
-import { mockCompareData, mockProfilesData, mockOrgsData } from "./mockData";
+import { FALLBACK_URLS } from "../../data/fallbackUrls";
 
 const API_URL = "https://politigraph.wevis.info/graphql";
 
 /* ============================================
-   Generic fetch wrapper WITH fallback to mock
+   Generic fetch wrapper WITH fallback
    ============================================ */
 async function safeGraphQLFetch(query, variables, fallbackFn) {
   try {
@@ -17,7 +17,6 @@ async function safeGraphQLFetch(query, variables, fallbackFn) {
       body: JSON.stringify({ query, variables }),
     });
 
-    // ❗ ถ้า HTTP status 500+, fallback
     if (!res.ok) {
       console.error("[API ERROR]", res.status, res.statusText);
       return fallbackFn();
@@ -25,7 +24,6 @@ async function safeGraphQLFetch(query, variables, fallbackFn) {
 
     const json = await res.json();
 
-    // ❗ ถ้า GraphQL error, fallback
     if (json.errors) {
       console.error("[GRAPHQL ERROR]", json.errors);
       return fallbackFn();
@@ -39,7 +37,7 @@ async function safeGraphQLFetch(query, variables, fallbackFn) {
 }
 
 /* ============================================
-   Actual GraphQL Queries
+   ACTUAL GraphQL Queries
    ============================================ */
 
 const QUERY_COMPARE = `
@@ -56,7 +54,8 @@ query CompareAWithEveryoneByEvent($whereA: PersonWhere!, $voteFilter: VoteWhere!
       id option voter_party voters(limit: 1) { firstname lastname image }
     }
   }
-}`;
+}
+`;
 
 const QUERY_PROFILES = `
 query AllPersonsProfiles {
@@ -70,7 +69,8 @@ query AllPersonsProfiles {
       }
     }
   }
-}`;
+}
+`;
 
 const QUERY_ORGS = `
 query Organizations {
@@ -79,22 +79,25 @@ query Organizations {
 `;
 
 /* ============================================
-   Exposed fetch functions (with fallback)
+   FIXED FALLBACK-FRIENDLY Functions
    ============================================ */
 
 export async function fetchCompareEvents(firstname, lastname) {
-  // Query variables สร้างแบบ dynamic
   const whereA = {
     firstname_CONTAINS: firstname || "",
     lastname_CONTAINS: lastname || "",
   };
 
-  const voteFilter = {}; // สามารถปรับ filter ได้ภายหลัง
+  const voteFilter = {};
 
   return safeGraphQLFetch(
     QUERY_COMPARE,
     { whereA, voteFilter },
-    () => mockCompareData()  // fallback
+    async () => {
+      // fallback JSON -> unwrap .data
+      const raw = await fetch(FALLBACK_URLS.compare_person).then((r) => r.json());
+      return raw.data; // IMPORTANT!
+    }
   );
 }
 
@@ -102,7 +105,13 @@ export async function fetchProfiles() {
   return safeGraphQLFetch(
     QUERY_PROFILES,
     {},
-    () => mockProfilesData()  // fallback
+    async () => {
+      // fallback JSON -> unwrap .data
+      const raw = await fetch(FALLBACK_URLS.all_persons_profiles).then((r) =>
+        r.json()
+      );
+      return raw.data; // IMPORTANT!
+    }
   );
 }
 
@@ -110,6 +119,10 @@ export async function fetchOrganizations() {
   return safeGraphQLFetch(
     QUERY_ORGS,
     {},
-    () => mockOrgsData()  // fallback
+    async () => {
+      // fallback JSON -> unwrap .data
+      const raw = await fetch(FALLBACK_URLS.organizations).then((r) => r.json());
+      return raw.data; // IMPORTANT!
+    }
   );
 }
