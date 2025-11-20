@@ -210,7 +210,7 @@ select:focus {
 #partyLegend {
   position: absolute;
   right: 5%; /* Move further right to compensate */
-  top: 15%;
+  top: 5vh;
   z-index: 5;
   background: #ffffffee;
   backdrop-filter: blur(4px);
